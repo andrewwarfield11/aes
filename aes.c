@@ -1,7 +1,4 @@
-﻿#include "../include/aes.h"
-/* Your project should ultimately provide a class with two functions: encrypt() and decrypt(). 
-Each function should take one argument, the plaintext or ciphertext, respectively, as a byte[] and return the result in a new byte[]. 
-The encryption key should be provided as the only argument to the class constructor. */
+﻿#include "include/aes.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -18,7 +15,7 @@ unsigned int k;  // cipher key
 
 int init(const uint8_t *key, const size_t len);
 
-void KeyExpansion(uint8_t *key, uint8_t schedule[], unsigned int Nk, unsigned int Nr);
+void KeyExpansion(const uint8_t *key, uint8_t schedule[], unsigned int Nk, unsigned int Nr);
 
 void SubBytes(uint8_t **state);
 
@@ -181,21 +178,9 @@ struct aes_ctx
     uint8_t schedule[MAX_KEY_EXP];
 } ctx;
 
-int init(const uint8_t *key, const size_t len)
-{
+int init(const uint8_t *key, const size_t len) {
     ctx.Nk = len / 4;
-    /*switch (len)
-    {
-    case 16:
-        ctx.Nr = 10;
-    case 24:
-        ctx.Nr = 12;
-    case 32:
-        ctx.Nr = 14;
-    default:
-        printf("Invalid key length\n");
-        return 0;
-    }*/
+
     if (len == 16) {
         ctx.Nr = 10;
     }
@@ -214,40 +199,32 @@ int init(const uint8_t *key, const size_t len)
 }
 
 // Key Scheduler
-// THIS IS ALL PSUDO CODE
-void KeyExpansion(uint8_t* key, uint8_t schedule[], unsigned int Nk, unsigned int Nr)
+void KeyExpansion(const uint8_t* key, uint8_t schedule[], unsigned int Nk, unsigned int Nr)
 {
 
     int i = 0;
     uint8_t temp[4];
 
-    for (i = 0; i < Nk; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
+    for (i = 0; i < Nk; i++) {
+        for (int j = 0; j < 4; j++) {
             schedule[4*i+j] = key[4*i+j];
         }
     }
 
-    for (i = Nk; i < Nb * (Nr + 1); i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
+    for (i = Nk; i < Nb * (Nr + 1); i++) {
+        for (int j = 0; j < 4; j++) {
             temp[j] = schedule[4*(i-1)+j];
         }
 
-        if (i % Nk == 0)
-        {
+        if (i % Nk == 0) {
             RotWord(temp);
             SubWord(temp);
             temp[0] = temp[0] ^ Rcon[i / Nk];
         }
-        else if (Nk > 6 && i % Nk == 4)
-        {
+        else if (Nk > 6 && i % Nk == 4) {
             SubWord(temp);
         }
-        for (int j = 0; j < 4; j++)
-        {
+        for (int j = 0; j < 4; j++) {
             schedule[4*i+j] = schedule[4*(i-Nk)+j] ^ temp[j];
         }
     }
@@ -258,14 +235,11 @@ void KeyExpansion(uint8_t* key, uint8_t schedule[], unsigned int Nk, unsigned in
 /* Transformation in the Cipher that processes the State using
 a nonlinear byte substitution table (S-box) that operates on
 each of the State bytes independently. */
-void SubBytes(uint8_t** state)
-{ //ben
+void SubBytes(uint8_t** state) { 
     // byte wise substition
     uint8_t i, j;
-    for (i = 0; i < 4; i++) // for each row
-    {
-        for (j = 0; j < 4; j++) // for each column
-        {
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
             state[i][j] = sbox[state[i][j]]; // Replaces the byte with the byte in the sub table
         }
     }
@@ -273,14 +247,11 @@ void SubBytes(uint8_t** state)
 
     /* Transformation in the Inverse Cipher that is the inverse of
 SubBytes(). */
-void InvSubBytes(uint8_t** state)
-{
+void InvSubBytes(uint8_t** state) {
     // Same as sub bytes, just use a different table
     uint8_t i, j;
-    for (i = 0; i < 4; i++) // for each row
-    {
-        for (j = 0; j < 4; j++) // for each column
-        {
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
             state[i][j] = inverseSbox[state[i][j]]; // Replaces the byte with the byte in the inverse sub table
         }
     }
@@ -288,8 +259,7 @@ void InvSubBytes(uint8_t** state)
 
     /* Transformation in the Cipher that processes the State by cyclically
 shifting the last three rows of the State by different offsets. */
-void ShiftRows(uint8_t** state)
-{ //ben
+void ShiftRows(uint8_t** state) { 
     // first row is not shifted
     // row 2 shifts one byte
     uint8_t val0, val1, val2;
@@ -320,8 +290,7 @@ void ShiftRows(uint8_t** state)
 
     /* Transformation in the Inverse Cipher that is the inverse of
 Shiftcols(). */
-void InvShiftRows(uint8_t ** state)
-{ //Andrew
+void InvShiftRows(uint8_t ** state) { 
     uint8_t temp1 = state[1][0];
     uint8_t temp2 = state[2][0];
     uint8_t temp3 = state[3][0];
@@ -343,8 +312,7 @@ void InvShiftRows(uint8_t ** state)
     state[3][3] = temp3;
 }
 
-uint8_t mixCol2(uint8_t b)
-{
+uint8_t mixCol2(uint8_t b) {
     // get the first bit
     uint8_t first = b >> 7 & 0x01;
     b = b << 1;
@@ -354,25 +322,22 @@ uint8_t mixCol2(uint8_t b)
         return b ^ 0x1B; // xor with 0001 1011 (0x1B) if first bit was 1 before shift1
 }
 
-uint8_t mixCol3(uint8_t b)
-{
+uint8_t mixCol3(uint8_t b) {
     return mixCol2(b) ^ b;
 }
 
 /* Transformation in the Cipher that takes all of the columns of the
 State and mixes their data (independently of one another) to
 produce new columns. */
-void MixColumns(uint8_t** state)
-{ //andrew
+void MixColumns(uint8_t** state) { 
 
-    /*
+/*
 |  2  3  1  1  |
 |  1  2  3  1  |
 |  1  1  2  3  |
 |  3  1  1  2  |
 */
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++) {
         uint8_t col[4] = {state[0][i], state[1][i], state[2][i], state[3][i]};
 
         state[0][i] = mixCol2(col[0]) ^ mixCol3(col[1]) ^ col[2] ^ col[3];
@@ -384,18 +349,15 @@ void MixColumns(uint8_t** state)
 
 /* Transformation in the Inverse Cipher that is the inverse of
 MixColumns(). */
-void InvMixColumns(uint8_t** state)
-{ //andrew
-// My logic for inv mix columns wasn't working so I just used multiplication tables
+void InvMixColumns(uint8_t** state) { 
 
-    /*
+/*
 |  14  11  13  9   |
 |  9   14  11  13  |
 |  13  9   14  11  |
 |  11  13  9   14  |
 */
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++) {
         uint8_t col[4] = {state[0][i], state[1][i], state[2][i], state[3][i]};
 
         state[0][i] = MixCol14[col[0]] ^ MixCol11[col[1]] ^ MixCol13[col[2]] ^ MixCol9[col[3]];
@@ -409,13 +371,10 @@ void InvMixColumns(uint8_t** state)
 Key is added to the State using an XOR operation. The length of a
 Round Key equals the size of the State (i.e., for Nb = 4, the Round
 Key length equals 128 bits/16 bytes). */
-void AddRoundKey(uint8_t** state, int round)
-{ //abraham
+void AddRoundKey(uint8_t** state, int round) { 
     int i, j;
-    for (i = 0; i < 4; i++)
-    {
-        for (j = 0; j < 4; j++)
-        {
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
             state[i][j] = state[i][j] ^ ctx.schedule[4*(4*round+j)+i];
         }
     }
@@ -423,12 +382,10 @@ void AddRoundKey(uint8_t** state, int round)
 
 /* Function used in the Key Expansion routine that takes a four-byte
 word and performs a cyclic permutation. */
-void RotWord(uint8_t* word)
-{ //abraham
+void RotWord(uint8_t* word) { 
     uint8_t c = word[0];
     int i;
-    for (i = 0; i < 3; i++)
-    {
+    for (i = 0; i < 3; i++) {
         word[i] = word[i + 1];
     }
     word[3] = c;
@@ -437,11 +394,9 @@ void RotWord(uint8_t* word)
 /* Function used in the Key Expansion routine that takes a four-byte
 input word and applies an S-box to each of the four bytes to
 produce an output word. */
-void SubWord(uint8_t* word)
-{ //abraham
+void SubWord(uint8_t* word) { 
     int i;
-    for (i = 0; i < 4; i++)
-    {
+    for (i = 0; i < 4; i++) {
         word[i] = sbox[word[i]];
     }
 }
@@ -451,26 +406,21 @@ void SubWord(uint8_t* word)
 The encryption key should be provided as the only argument to the class constructor. */
 
 // Encryption Routine
-void encrypt(const uint8_t *in, uint8_t *out)
-{
+void encrypt(const uint8_t *in, uint8_t *out) {
     //Get the key and length, confirm that it's of correct length.
     uint8_t **state = malloc(4 * sizeof(uint8_t *));
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++) {
         state[i] = malloc(4 * sizeof(uint8_t));
     }
     //state = in;
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             state[i][j] = in[4*j+i];
         }
     }
     AddRoundKey(state, 0);
     int i;
-    for (i = 1; i < ctx.Nr; i++)
-    {
+    for (i = 1; i < ctx.Nr; i++) {
         SubBytes(state);
         ShiftRows(state);
         MixColumns(state);
@@ -480,65 +430,31 @@ void encrypt(const uint8_t *in, uint8_t *out)
     ShiftRows(state);
     AddRoundKey(state, i);
 
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             out[4*j+i] = state[i][j];
         }
     }
 }
 
-/*
-//PUSDO CODE
-//FOR ENCRYPTION
-Cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)]) {
-begin
-    byte state[4,Nb]
-
-    state = in
-
-    AddRoundKey(state, w[0, Nb-1]) // See Sec. 5.1.4
-
-    for round = 1 step 1 to Nr–1
-        SubBytes(state) // See Sec. 5.1.1
-        Shiftcols(state) // See Sec. 5.1.2
-        MixColumns(state) // See Sec. 5.1.3
-        AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
-    end for
-
-    SubBytes(state)
-    Shiftcols(state)
-    AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
-
-    out = state
-end
-}
-*/
-
 // Decryption Routine
-void decrypt(const uint8_t *in, uint8_t *out)
-{
+void decrypt(const uint8_t *in, uint8_t *out) {
     uint8_t **state = malloc(4 * sizeof(uint8_t *));
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++) {
         state[i] = malloc(4 * sizeof(uint8_t));
     }
 
     //set state equal to in
     //state = in;
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             state[i][j] = in[4*j+i];
         }
     }
 
     // perform decryption
     AddRoundKey(state, ctx.Nr);
-    for (int i = ctx.Nr - 1; i > 0; i--)
-    {
+    for (int i = ctx.Nr - 1; i > 0; i--) {
         InvShiftRows(state);
         InvSubBytes(state);
         AddRoundKey(state, i);
@@ -550,11 +466,10 @@ void decrypt(const uint8_t *in, uint8_t *out)
 
     // set out equal to state
     //out = state;
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             out[4*j+i] = state[i][j];
         }
     }
 }
+
